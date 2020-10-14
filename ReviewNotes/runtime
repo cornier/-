@@ -1,0 +1,113 @@
+runtime:
+
+	
+
+
+
+	isa_t:
+		Class cls;
+    	uintptr_t bits;
+			uintptr_t nonpointer        : 1; //是否指针优化, 如果是 isa直接表示对象的值,
+											 //平时是一个指针指向另一块内存区
+		    uintptr_t has_assoc         : 1; //对象含有或者曾经含有关联引用, 没有关联引用可以更快释放内存
+		    uintptr_t has_cxx_dtor      : 1; //该对象是否是c++或者Objc的析构器 //类似释放
+		    uintptr_t shiftcls          : 44;//类的指针  arm64架构中有33位可以存储类指针
+		    uintptr_t magic             : 6; //判断对象是否初始化完成 是真的对象还是没有初始化空间
+		    uintptr_t weakly_referenced : 1; //对象被指向或者曾经指向一个ARC的弱变量, 没有的话可以更快释放
+		    uintptr_t deallocating      : 1; //对象是否正在释放内存
+		    uintptr_t has_sidetable_rc  : 1; //判断对象的引用计数是否过大, 如果过大则需要其他散列表来存储
+		    uintptr_t extra_rc          : 8 //存放该对象的引用计数值减一后的结果。对象的引用计数超过 
+		    								//1，会存在这个这个里面，如果引用计数为 10，extra_rc的值就为 9
+
+	objc_object:
+		isa_t isa
+
+	objc_class: objc_object
+		Class superclass; //父类
+    	cache_t cache;    //用来出来已调用方法的缓存   
+    	class_data_bits_t bits; //存储了获取class_rw_t, isa状态. 是否swift等, 
+
+    struct cache_t:
+	    struct bucket_t *_buckets; //散列表 用来存储Method的链表
+	    mask_t _mask;				//分配用来缓存bucket的总数
+	    mask_t _occupied;			//表明目前实际占用的缓存bucket的个数
+
+	 struct class_data_bits_t:
+	 	uintptr_t bits; //存储了class_rw_t的地址
+
+	 1.class_data_bits_t:  在编译的时候只想class_ro_t, 只读, 
+	 						在运行时 通过realizeClass函数讲bits指向class_rw_t
+	 2.调用realizeClass时:
+	 		(1)从class_data_bits_t 调用data方法, 将结构从class_rw_t强制转换成class_ro_t指针
+	 		(2)初始化一个class_rw_t结构体
+	 		(3)设置结构体ro的值以及flag
+	 		(4)最后调用methodlizeClass方法, 把类里面的属性, 协议, 方法都加载进来
+
+
+	 class_ro_t  和 class_rw_t
+	 class_rw_t:
+
+	    uint32_t version;
+	    const class_ro_t *ro;
+
+	    method_array_t methods;
+	    property_array_t properties;
+	    protocol_array_t protocols;
+
+	    Class firstSubclass;
+	    Class nextSiblingClass;
+
+	 class_ro_t:
+
+		uint32_t flags;
+	    uint32_t instanceStart;
+	    uint32_t instanceSize;
+	#ifdef __LP64__
+	    uint32_t reserved;
+	#endif
+
+	    const uint8_t * ivarLayout;
+	    
+	    const char * name;
+	    method_list_t * baseMethodList;
+	    protocol_list_t * baseProtocols;
+	    const ivar_list_t * ivars;
+
+	    const uint8_t * weakIvarLayout;
+	    property_list_t *baseProperties;
+
+
+	    struct category_t {
+		    const char *name;
+		    classref_t cls;
+		    struct method_list_t *instanceMethods;
+		    struct method_list_t *classMethods;
+		    struct protocol_list_t *protocols;
+		    struct property_list_t *instanceProperties;
+		    // Fields below this point are not always present on disk.
+		    struct property_list_t *_classProperties;
+
+		    method_list_t *methodsForMeta(bool isMeta) {
+		        if (isMeta) return classMethods;
+		        else return instanceMethods;
+		    }
+
+		    property_list_t *propertiesForMeta(bool isMeta, struct header_info *hi);
+		};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

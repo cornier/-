@@ -1,0 +1,44 @@
+movq 0xd(%rip), %rax  将rip + 0xd 算出来的地址值 找到存储空间 拿出内容 给rax
+leaq 0xd(%rip), %rax  将rip + 0xd 算出来的地址值 给rax 
+
+
+
+
+func getFn() -> Fn {
+    var num = 0
+    func plus(_ i: Int) -> Int {
+        num += i
+        return num
+        return i
+    }
+    return plus
+}
+返回的Fn 前8是函数地址 后面8是0 
+
+
+
+func getFn() -> Fn {
+    var num = 0
+    func plus(_ i: Int) -> Int {
+        num += i
+        return num
+        return i
+    }
+    return plus
+}
+含临时变量的block
+前8 函数地址 + 后面8字节堆地址
+
+
+
+
+
+
+
+
+
+
+
+
+
+

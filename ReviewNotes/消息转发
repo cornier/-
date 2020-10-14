@@ -1,0 +1,60 @@
+消息转发
+	objc_msgSend:
+		1.检查这个selector是不是要忽略的
+		2.检查target是不是nil
+		3.CacheLookup[不断通过SEL与cache中的bucket->sel进行比较, 如果找到了直接执行]
+		4.在缓存中没有找到方法, 则调用__class_lookupMethodAndLoadCache3, 实际调用lookUpImpOrForward
+		4.1 无锁的缓存查找 [如果参数传入cache, 则查找缓存]
+		4.2 如果类没有实现或者初始化, 实现或者初始化[realizeClass, 申请class_rw_t的可读写空间]
+		4.3 加读锁, 运行时动态添加方法
+		4.4 缓存以及再当前类中方法查找
+		4.5 尝试查找父类的缓存及方法列表
+		4.6 是否是meta-class类，如果不是元类，就执行_class_resolveInstanceMethod，如果是元类，执行_class_resolveClassMethod[有没有实现resolveInstanceMethod 和 resolveClassMethod]
+		5 消息转发
+		5.1 + (id)forwardingTargetForSelector:(SEL)aSelector
+		5.2 - (void)forwardInvocation:(NSInvocation *)
+		anInvocation
+		Runtime系统会向对象发送methodSignatureForSelector:消息，并取到返回的方法签名用于生成NSInvocation对象。为接下来的完整的消息转发生成一个 NSMethodSignature对象。NSMethodSignature 对象会被包装成 NSInvocation 对象，forwardInvocation: 方法里就可以对 NSInvocation 进行处理了
+		6. 如果都没有 就 doesNotRecognizeSelector... 抛异常了
+
+	三次避免崩溃的机会
+		1. resolveInstanceMethod
+			resolveClassMethod (本类中是否提供一个函数实现)
+		2. forwardingTargetForSelector [runtime 给一个转发给对他对象的机会]
+		3. methodSignatureForSelector [获得函数的参数和返回值, 返回一个函数签名, 创建一个NSInvocation 发送给forwadinvocation]
+		   forwardInvocation	
+
+
+
+
+1. 检查receiver是不是nil
+2. cache中查找
+3. methodTableLookup
+消息发送阶段 3. _class_lookMethodAndLocalCache中 使用lookupImpOrForward,
+			 先找缓存, 如果没有 去类对象或者元类对象查找, 如果找到 放入receiver的缓存, 如果没有查到, 去父类缓存和class_rw_t的methodlist查找, 
+动态方法解析阶段 4._class_resolveMethod
+				如果不是元类:_class_resolveInstanceMethod
+				_class_resolveClassMethod
+				然后lookUpImpOrNil
+[动态添加: class_addMethod(self, selector, Method.imp, Method.types)]
+
+
+消息发送 动态方法解析 消息转发
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

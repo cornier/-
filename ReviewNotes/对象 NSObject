@@ -1,0 +1,70 @@
+对象 NSObject
+
+	Class objc_getClass(const char *aClassName)
+	{
+	    if (!aClassName) return Nil;
+
+	    // NO unconnected, YES class handler
+	    return look_up_class(aClassName, NO, YES);
+	} //参数是类名的字符串，返回的就是这个类的类对象
+
+	Class object_getClass(id obj)
+	{
+	    if (obj) return obj->getIsa();
+	    else return Nil;
+	} //返回isa
+
+	+ (Class)class {
+    	return self;   //类的class 还是类
+	}
+
+	- (Class)class {
+	    return object_getClass(self); //对象的class 
+是对象的isa = 类
+	}
+	+ (Class)superclass {
+	    return self->superclass;  //类的superclass  是父类
+	}
+
+	- (Class)superclass {
+	    return [self class]->superclass; //对象的superclass是 isa(类)的superclass
+	}
+
+	+ (BOOL)isMemberOfClass:(Class)cls {
+	    return object_getClass((id)self) == cls; //元类 == cls
+	}
+
+	- (BOOL)isMemberOfClass:(Class)cls {
+	    return [self class] == cls; //isa(类) == cls
+	}
+
+	+ (BOOL)isKindOfClass:(Class)cls {
+	    for (Class tcls = object_getClass((id)self); tcls; tcls = tcls->superclass) {
+	        if (tcls == cls) return YES; //类的isa  元类 == cls [不等 继续取元类的superclass]
+	    }
+	    return NO;
+	}
+
+	- (BOOL)isKindOfClass:(Class)cls {
+	    for (Class tcls = [self class]; tcls; tcls = tcls->superclass) {
+	        if (tcls == cls) return YES; //self的isa(类)  == cls [不等 继续取类的父类的父类]
+	    }
+	    return NO;
+	}
+
+
+dealloc时发生了什么: 清除成员变量, 移除关联对象, 移除弱引用
+
+
+category加载处理过程:
+	runtime加载某个类的所有category数据
+	把所有category的方法 属性 协议数据, 合并到一个大数组中, 后面参与编译的category数据会在数组前面
+	将合并后的分类数据(方法 属性 协议), 插入到类原来的数据的前面
+
+
+
+
+
+
+
+

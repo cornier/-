@@ -1,0 +1,50 @@
+KVO:
+
+	KVO 通过isa_swizzing技术实现的, 
+	在运行时根据原类创建一个中间类, [命名规则NSKVONotifying_xxx] 
+	动态修改当前对象的isa指向中间类, 
+	并将class方法重写, 返回原类的class
+
+	KVO会重写keyPath对应属性的setter方法，没有被KVO的属性则不会重写其setter方法。
+	在重写的setter方法中，修改值之前会调用willChangeValueForKey:方法，
+	修改值之后会调用didChangeValueForKey:方法，
+	这两个方法最终都会被调用到observeValueForKeyPath:ofObject:change:context:方法中
+
+
+	系统为了实现KVO，为NSObject添加了一个名为NSKeyValueObserverRegistration的Category，
+	KVO的add和remove的实现都在里面。
+	在移除的时候，系统会判断当前KVO的key是否已经被移除，
+	如果已经被移除，则主动抛出一个NSException的异常。//ps: 可以看堆栈
+
+
+	1. 实现原理:
+		KVO是基于runtime机制实现的
+		当某个类的属性对象第一次被观察时，系统就会在运行期动态地创建该类的一个派生类(该类的子类)，在这个派生类中重写基类中任何被观察属性的setter 方法。派生类在被重写的setter方法内实现真正的通知机制
+		如果原类为Person，那么生成的派生类名为NSKVONotifying_Person
+		每个类对象中都有一个isa指针指向当前类，当一个类对象的第一次被观察，那么系统会偷偷将isa指针指向动态生成的派生类，从而在给被监控属性赋值时执行的是派生类的setter方法
+	2. 如何手动关闭KVO:
+		(BOOL)automaticallyNotifiesObserversForKey:(NSString *)key  返回NO
+	3. 通过KVC修改属性会触发KVO么
+		• 通过KVC修改属性会触发KVO, KVC的全称是Key-Value Coding，俗称“键值编码”，可以通过一个key来访问某个属性,本质上来说KVC内部在修改成员变量的同时是会主动的调用调用willChangeValueForKey:只调用didChangeValueForKey：去触发KVO的，所以才会触发。
+	 	•  直接修改成员变量不会触发KVO。直接修改成员变量内部并没有做处理只是单纯的赋值，所以不会触发。
+
+	 	[self willChangeValueForKey:@"age"];
+	    [super setAge:age];
+	    [self didChangeValueForKey:@"age"];里面会调用oberver方法
+
+KVC:
+
+
+	1. setValue: @10 forKey: @"age"
+		setAge:
+		_setAge:
+		没有找到后会查找 AccessInstanceVariableDirectly
+		accessInstanceVariablesDirectly -> Bool 如果返回YES 允许访问成员变量, 如果返回NO 不允许访问
+		允许的情况下 查找 _key  _isKey key isKey 找到后直接赋值
+	2. valueForKey:
+		getKey
+		key
+		isKey
+		_key:按顺序查找 找到后 调用
+		没有找到的话  查找AccessInstanceVariableDirectly 返回no抛异常
+		允许的情况下 查找 _key _isKey key  isKey 按顺序查找成员变量

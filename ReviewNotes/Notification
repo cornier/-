@@ -1,0 +1,43 @@
+Notification
+
+NotificationCenter.default.addObserver(self, 
+							selector: #selector(shareWeChatResult), 
+							name: NSNotification.Name(rawValue: "JJRShareSuccess"), 
+							object: true)
+
+	observation 持有观察者和SEL
+
+	1.如果存在name(无论object是否存在)
+	named表(mapTable): key(name)
+						value(mapTable): key(object)
+										value(observation)
+	2.只存在object
+	nameless表(mapTable): key(object)
+					      value:(observation链表)
+	3.没有name和object
+	直接把observation 放到wildcard链表结构
+
+
+1、app如何接收到触摸事件的？
+
+	1.1首先，手机中处理触摸事件的是硬件系统进程 ，当硬件系统进程识别到触摸事件后，会将这个事件进行封装，并通过machPort,将封装的事件发送给当前活跃的APP进程。
+	1.2由于APP的主线程中runloop注册了这个machPort端口，就是用于接收处理这个事件的，所以这里APP收到这个消息后，开始寻找响应链。
+	1.3寻找到响应链后，开始分发事件，它会优先发送给手势集合，来过滤这个事件，一旦手势集合中其中一个手势识别了这个事件，那么这个事件将不会发送给响应链对象。
+	1.4手势没有识别到这个事件，事件将会发送给响应链对象UIResponser。
+
+
+
+NSHashTable 是 NSSet 的通用版本,和 NSSet/NSMutableSet不同的是,NSHashTable具有以下特性:
+	NSHashTable是可变的,没有不可变的对应类
+	NSHashTable可以持有成员的弱引用
+	NSHashTable可以在加入成员时进行copy操作
+	NSHashTable可以存储任意的指针,通过指针来进行相等性和散列检查
+
+NSMapTable是NSDictionary的通用版本,NSMapTable具有下面特性:
+	NSMapTable是可变的,没有不可变的类
+	NSMapTable可以持有键和值的弱引用,当键或值当中的一个被释放时,整个这一项就会被移除掉
+	NSMapTable可以在加入成员时进行copy操作
+	NSMapTable可以存储任意的指针,通过指针来进行相等性和散列检查
+
+
+

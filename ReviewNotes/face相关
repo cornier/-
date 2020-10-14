@@ -1,0 +1,459 @@
+1. 类和结构体的区别:
+	类和结构体的创建方式 一个在堆 一个在栈
+	类是引用类型, 结构体是值类型
+	更深入:
+	类和结构体的编译方式区分
+		结构体: 所有结构体都会有一个编译器自动生成的初始化器(initializer,构造器,构造方法),
+			   编译器会根据情况,可能会为结构体生成多个初始化器,但是宗旨是:保证所有成员都有初始值
+			   一旦在定义结构体的时候自定义好了初始化器,编译器就不会再帮它自动生成其他初始化器
+		类: 	   编译器并没有为类自动生成可以传入成员值的初始化器
+	分类和类的编译方式区分 ???
+ 
+	swift为什么要在有类的同时又设计了结构体和枚举
+		类:    对象和对象是相互独立的, 操作一个对象   可以继承, 有对象的概念
+		结构体: 值类型内存管理由系统管理, 写时复制, 参数必须有值, 性能好
+			   设计角度: 面向过程的产物, 中间过程传值, 将数据集合起来
+		枚举: 增加代码可读性 占用内存小, 还可以关联值, 用作模式匹配方便
+			 直观的讲 所有的情况枚举出来
+	枚举: 如果是只有原始值: 只占用1字节
+		  如果含有关联值 1+最大占用字节数
+
+2.写时拷贝机制:
+	
+3.模式匹配:
+	其他语言switch语法或多或少有限制, 但swift的不一样 除了对枚举, 数字, 字符串switch, 还可以对任意实现了~=运算符的对象switch, 还支持where子句,匹配范围,类型推断转换等等
+
+	~=: switch stu:
+		struct Student {
+    		var score = 0, name = ""
+    		// pattern: case后面的模式, value: switch后面放的
+    		static func ~= (pattern: Int, value: Student) -> Bool {
+        		value.score >= pattern
+    		}
+    		static func ~= (pattern: Range<Int>, value: Student) -> Bool {
+		        pattern.contains(value.score)
+		    }
+    	}
+
+	where:  case (let x, let y) where x == y:
+
+	as is: 	switch animal {
+				case let cat as Cat:
+			}
+
+4.协议:
+	面向协议开发: 不需要继承只需要遵守协议即可, 更加模块化
+	面向对象开发: 传统的面向对象开发思维方式是将类中实现的相似方法抽取出来，
+				接着放入一个Base类，然后继承于Base类后各个类即可找拥有相同的方法，不用再一个个手动实现
+
+5.泛型:
+	where 泛型约束, 为什么swift标准库比如swap, map这些函数为什么要用到泛型, 只用协议有什么弊端
+	init<I: IteratorProtocol>(_ iterator: I) where I.Element == Int
+
+6.运算符, 下标, 字面量协议, 尾随闭包
+	下标: subscript(s: String) -> A {
+	         get { return storage }
+	         set { storage = newValue }
+	     }
+	字面量协议: 
+		 ExpressibleByNilLiteral: 		可以为nil
+         ExpressibleByIntegerLiteral:   Int
+         ExpressibleByFloatLiteral : 	float 
+         ExpressibleByBooleanLiteral	Bool
+         ExpressibleByStringLiteral: 需要实现:
+                                     ExpressibleByUnicodeScalarLiteral
+                                     ExpressibleByExtendedGraphemeClusterLiteral
+         ExpressibleByArrayLiteral
+         ExpressibleByDictionaryLiteral
+
+
+         枚举 只支持   ExpressibleByIntegerLiteral
+                     ExpressibleByFloatLiteral
+                     ExpressibleByStringLiteral
+         CustomStringConvertible协议: description() {}
+    尾随闭包: 最后一个参数是闭包可以省略
+    自动闭包:
+    		 @autoclosure 会自动将 20 封装成闭包 { 20 }
+ 			 @autoclosure 只支持 () -> T 格式的参数
+ 			 @autoclosure 并非只支持最后1个参数
+ 			 空合并运算符 ?? 使用了 @autoclosure 技术
+ 			 有@autoclosure、无@autoclosure，构成了函数重载
+
+7.Optional, 变量, 常量, 类型检查, 扩展
+optional: public enum Optional<Wrapped> : ExpressibleByNilLiteral {
+		     case none
+		     case some(Wrapped)
+		     public init(_ some: Wrapped) {}
+		  }
+类型检查 is
+类型转换 as
+
+
+
+8.函数式编程
+	函子, 单子, 函数是第一公民等
+
+9.响应式编程:
+	Rxswift, Combine, 比如响应式编程在网络请求, 数据解析, UI响应等各个方面的表现
+
+10.单向数据流模式:
+	结合Redux, 问问单向数据流的一些流程原理
+
+11.MVC, MVVM, Coordinator, 单向数据流
+
+12.SwiftUI
+	UI库结合Flutter, 讨论两者之间各自的好处
+
+13.Swift5.1新特性
+	@propertyWrapper  属性包装 ???
+	@_functionBuilder
+	@dynamicMemberLookup  动态查找属性 配合subscript
+
+14.Swift在其他领域的扩展
+	在web, 后端开发上面的思路
+	讨论swift在人工智能上有什么语法的优越性
+	swift在直接使用其他语言所写的库的可行性思路
+
+15.timer 退到后台 再退回来 时间不停止 cpu使用时间之类的
+	使用mach内核级的函数可以使用mach_absolute_time()获取到CPU的tickcount的计数值
+
+16.throw和rethrow区别
+	1, throw异常，这表示这个函数可能会抛出异常，无论作为参数的闭包是否抛出异常
+	2, rethrow异常，这表示这个函数本身不会抛出异常，但如果作为参数的闭包抛出了异常，那么它会把异常继续抛上去。例如
+	3、不抛出异常，这表示这个函数会处理参数闭包的异常，或者不对闭包进行运算。
+	Swift异常处理体现了函数式语言的特性，因此我们可以传一个会抛出异常的函数闭包（高阶函数）作为参数传到另一个函数中（父函数），父函数可以在子函数抛出异常时直接向上抛出异常，这时用rethrow关键字表示引用闭包时抛出的异常。
+	throw关键字和Java一样，就是说调用这个函数本身可能会抛出异常。
+	rethrow可以看作是throw的子集，Swift不把rethrow作为完整的类型。例如一个函数不能同时用throw和rethrow抛出异常，高阶函数闭包定义中也不能包含rethrow。rethrow更像函数的属性（类似@noreturn），rethrow只是在函数作为参数调用的上下文中才有意义，就是为了简化语法的。
+
+//Swift
+1.协议
+	ExpressibleByDictionaryLiteral 字典字面量
+	Sequence: 对一系列相同类型的值的集合, 并且提供对这些值 的迭代能力
+			protocol Sequence{
+				associatedtype Iterator:IteratorProtocol
+				func makeIterator()->Iterator
+			}
+			值类型的Iterator: 当把 Iterator 赋值给一个新变量时，是把原 Iterator 的所有状态拷贝了一份赋值给新的 Iterator，原 Iterator 在继续迭代时不会影响新的 Iterator
+			引用类型的Iterator: 再赋值给一个新的变量后，新的 Iterator 和原 Iterator 在进行迭代时会互相对对方产生影响。
+	Collection
+	CustomStringConvertible:  同 description() {}
+	Hashable
+	Codable
+	Comparable
+	RangeReplaceableCollection
+
+2.
+	public open final:
+		访问控制: open: 允许在定义实体的模块, 其他模块访问, 允许其他模块进行继承,重写, open 只能用在类 类成员上
+    			 public 允许在定义实体的模块, 其他模块访问, 不允许其他模块继承,重写
+    			 internal[默认的]: 只允许在定义实体的模块中访问, 不允许其他模块中访问
+    			 fileprivate: 只允许再定义实体的源文件中访问
+    			 private: 只允许在定义实体的封闭声明中访问
+	static class: 
+		class 可以继承
+		static 不能继承
+		static let: 类调用
+			   let: 实例调用
+		static var: 静态变量只会初始化一次, lazy 用到才会初始化
+					全局变量只会初始化一次  lazy
+	mutating  inout:
+		结构体中 mutating 以便于让func可以修改struct和protocol的extension中的成员的值
+		inout: 参数可变更内容, 实际上传入参数指针
+	infix operator: 自定义前缀运算符
+	@dynamicMemberLookup: 动态成员查找
+						struct Person {
+						    var name = "123"
+						    subscript(dynamicMember member: String) -> String {
+						        let properties = ["name": "Zhou", "city": "Shanghai"]
+						        return properties[member, default: "undefined"]
+						    }
+
+						    subscript(dynamicMember member: String) -> Int {
+						        return 18
+						    }
+						}
+						print(p.city)
+						如果重载了subscript(dynamicMember member: String)这个函数, 必须指明city类型
+	where: 模式匹配
+	@dynamicCallable
+	@autoclosure: 自动闭包: 将传入参数变为()->T, 只支持 ()-> T
+	@escaping: 逃逸闭包,可以在其他位置调用闭包
+3. 高阶函数//https://www.jianshu.com/p/d81f5e214222
+	Filter, Map, Reduce, flatmap, compactMap 异同
+	filter 过滤 返回数组内个数<=原数组
+	Map    遍历 返回数组内个数=原数组
+	Reduce 累计处理 返回原类型
+	flatmap 会将二维数组 处理成一位数组返回, 不存在nil 会解包
+	compactMap: 可以把一个集合中的空值去除，并且返回一个去除nil值得数组
+	map与compactMap区别:https://www.jianshu.com/p/07b59f4f0071
+
+4.	柯里化 什么意思: 将一个接受多参数的函数变换为一系列只接受单个参数的函数
+
+	POP 与 OOP的区别:
+		面向过程: 分析出解决问题所需要的步骤, 然后用函数把这些步骤一步步实现, 依次调用
+		面向对象: 把具体事务的特性属性和通过这些属性来实现一些动作的具体方法放到一个类里面
+
+	Any 与AnyObject 区别:
+	Any: 代表任何类型
+	AnyObject: 代表任何类 类型
+	AnyObject 是一个协议
+
+	rethrows 和 throws 有什么区别呢？
+	throws: 代表这个函数可能抛出异常, 无论是否作为参数的函数抛出异常
+	rethrows: 代表这个函数不会抛出异常, 但是作为参数的函数可能抛出异常 会向上抛异常
+
+	在语句中的含义（switch、while、for）:
+	break: 停掉循环
+	return: 停止 结束方法执行
+	continue: 停掉此次循环
+	fallthough: 继续下一个case 
+
+5. 泛型 T 与 Any有什么区别？该如何使用？
+	Any会避开类型检查
+
+6: 自旋锁和互斥锁区别
+	互斥锁 线程休眠
+	自旋锁 线程等待
+
+7.optional 底层实现
+	enum Optional<T> {
+	    case some(T)   //对于所有成功的情况，我们用case some，并且把成功的结果保存在associated value里；
+	    case none        对于所有错误的情况，我们用case none来表示；
+	}
+
+
+
+//////
+iOS编译
+	生成.app文件, 运行 build phases 编译文件 链接文件, 拷贝资源文件 编译sb 链接sb 
+ linker 签名 摘要算法
+压缩字符 解压缩字符 算法 面试题01.06 字符串压缩
+一个函数调用顺序, 在堆栈上怎么跑, stackpoint指针移动寄存器, 每个寄存器的用法, 为什么hook msg_send只使用前八个寄存器, 第九个寄存器用上不行吗 为什么不行, 怎么动态调用c方法, jsPatch的原理, 如果是你怎么实现, 
+启动流程:  
+ASLR bind
+手写快排 盛水最多的容器
+网络 握手挥手, 拥塞控制和洪水攻击, 三次握手能不能带数据? 
+	带有SYN标志的过程包是不可以携带数据的
+	三次握手可以带数据
+fast tcp????
+autorelease的结构 在多线程上的注意点 哨兵, 没有runloop怎么搞
+
+autorelease是系统控制, 如果遇到一个线程存在时间很长, 他的那份内存可能释放的很慢, 在TLS上塞住了, 虽然这个还是有可能慢慢释放掉, 但是如果任务很多,释放的会很慢,行程的事实上的内存堆积 ????5.7
+
+TLS对称加密还是非对称加密, 介绍一下两者原理, 讲一下RSA原理 数字签名是什么, TLS握手流程说一下, 1.2版本  1.3版本做了哪些优化, 新的秘钥协商机制 ////  psk算法 废弃RSA SHA-1 1RTT 0RTT
+
+ios网络加载流程 DNS工程, DNS服务器的层级, 递归迭代查询的过程, DNS用到哪些网络协议, 存在什么问题, 怎么优化
+HTTP1.0 和1.1,  2和3
+
+http header 和body的区别
+header 主要传输cookie等信息
+body   传输 post的数据
+
+怎么把UDP改成可靠传输? quic   https://http3-explained.haxx.se/zh/
+	RTP[Real Time Protocol]: 
+		RTP提供的各种服务包括有效负载识别，序列编号，时间戳和投递监听。RTP能够序列化包，当这些包在收端不是按顺序到达的时。序列号也能被用来识别包丢失。时间戳被用于媒体有效的播放。到达的数据一直被RTCP监听，以通知RTP层来校正其编码和传输的参数。例如，如果RTCP层检测到包丢失，它会通知RTP层减缓发送速率
+
+通知中心怎么实现的 为什么这么实现  观察者模式
+JSPatch  JSCore有没有了解, 对RN weex Flutter有没有什么看法 使用JSCore的优缺点
+怎么看待RN和Flutter的优劣, 认为那个更好 为什么
+
+
+
+
+滴滴基础面试：
+局部对象释放时机、子线程中的内存管理、weak和assign区别、用assign修饰对象会有什么问题、nonatomic和atomic区别、为什么NSTimer不准时、为什么AFN2.0用了线程保活AFN3.0不再用了，列表加载的图片很多，滑动卡顿怎么解决，runloop的理解
+
+1. 局部对象的释放时机是：会自动加到自动释放池中，等到本次runloop休眠的时候会统一释放
+2. 子线程的内存管理：也是引用计数那一套吧，只不过是如果不加runloop包活，子线程运行完会自动销毁
+3. weak和 assign区别：weak修饰对象，assign修饰基本数据类型；如果用assign修饰对象，虽然引用计数不会增加，但是释放之后不会置为nil，可能导致野指针
+4. noatomic和atomic的区别：noatomic是非原子性的，atomic是原子性的，是线程安全的，这里的线程安全只是保证同一时间只有一个线程能够写入，但是同一时间可以有多个线程都可以取值，虽然写入操作是线程安全的,但是并不能保证读取操作和写入操作在一起执行，所以有可能导致线程不安全
+5. 为什么NSTimer不准时？ 答：
+6. 为什么AFN2.0用了线程保活AFN3.0不再用了:   因为AF2.0的时候，NSURLConnection有一个设计缺陷，发出请求必须在当前线程接收毁掉，所以必须包活线程，是一种无奈之举；AFN3.0改成了NSURLSession，NSURLSecction解决了这个问题，NSURLSession可以指定接收回调线程
+7. 列表加载的图片很多，滑动卡顿怎么解决：卡顿产生的根本原因就是CPU和GPU渲染流水线耗时过长，导致掉帧，这里就是因为图片解码导致的渲染流水线过长，我们应该把图片解码操作放到子线程中去做，并且增加图片缓存，避免重复解码
+8. runloop的理解?  答：
+
+
+NSArray和NSDictionary的实现原理
+怎么理解block的
+	Block变量截获过程
+	__block实现原理
+property关键字
+	深copy 浅copy
+	weak 关键字
+	weak的数据结构 置nil的过程
+	strong和weak的区别
+SDWebImage的内存是怎么设计的更新原则是什么
+为什么在主线程更新UI
+保证OC容器在多线程下的数据安全
+页面直接卡死, 导致无法获取到FPS 怎么解决
+为什么有时候FPS很高, 但还有卡的感觉
+如何节能优化
+	蜂窝忘了和wifi区别
+OLED和LED的区别, 为什么暗黑模式更省电
+	对比度:
+	LED 显示黑色 依靠液晶分子的偏移来完成遮挡背光显示黑色
+	OLED 显示黑色 通过关闭像素, 将像素的亮度变成0
+	结构:
+	LED: 几层材料, 需要背光源
+	OLED: 结构简单, 不需要背光源
+
+协议；子类怎么重写父类的懒加载；
+lazy的实现原理；
+sequnce lazy是怎么实现的；
+如何定一个对内写对外读的协议
+class和struct的区别以及引用场景
+锁的了解：有哪些锁，用过哪些，锁的实现原理
+
+
+
+
+设备唯一标识: //https://www.jianshu.com/p/c590d1bd1532
+UDID[Unique Device Identify, xcode可以看到]: 
+	iOS设备的唯一标识码, 由40个字符的字母和数字组成, 在很多需要限制一台设备一个账号的应用中经常会用到, 在iOS5中可以获取到设备的UDID, 后来被苹果禁止
+UUID[Universally Unique Identify]:
+	唯一通用识别码, 他是让分布式系统中的所有元素, 都能有唯一的辨识, 而不需要投过中央控制端来做辨识的指定, 这样 每个人都可以建立不与其他人冲突的UUID, 苹果公司建议使用UUID为应该生成唯一标识字符串
+	删除应用再次安装是, 又会生成新的字符串, 解决办法: UUID一般只生成一次保存再iOS系统汇总
+MAC Address: 
+	用来表示互联网上没一个站点的标识符, 采用十六进制数表示, 共6个字节, 其中前三个字节是有IEEE的注册管理机构
+	编制上唯一的标识符, 接入网络的设备都有一个MAC地址
+IDFA[identifierForIdentifier]: 广告标识符, 适用于对外,例如广告推广, 换量等跨应用的用户追踪等
+
+
+URLProtocol: 
+请求发送的顺序 canInitWithRequest->canonicalRequestForRequest->startLoading->stopLoading
+	1. 注册[NSURLProtocol registerClass:[NSCustomURLProtocol class]];
+	2. + (BOOL)canInitWithRequest:(NSURLRequest *)request;
+		确定子类是否处理此请求
+	3. - (void)startLoading;
+		启动特定的请求加载
+		创建一个request用于发出请求, 并且标记请求  用于canInitWithRequest识别, 否则会再次兰拦截
+		[NSURLProtocol setProperty:@YES forKey:ResourceProtocolHandleKey inRequest:newRequest];
+		[NSURLProtocol propertyForKey:ResourceProtocolHandleKey inRequest:request]
+	4. 在网络请求的回调中 缓存数据
+	5. 多个urlprotocol同时注册, protocol1, protocol2, protocol3, 
+		先调用protocol3, 然后protocol2, 然后protocol1
+
+
+图片大小计算:
+	图片高度 * 图片宽度 * 一个像素占用的字节数
+	600 x 800 x 4
+	ARGB8888	4字节
+1.yuv格式 占用内存
+	1.YUV444占用内存空间 = w * h * 3
+	2.YUV422占用内存空间 = w * h * 2
+	3.YUV420占用内存空间 = w * h * 3/2
+
+设计模式:
+类簇: NSString
+观察者: KVO
+代理模式: delegate
+单例: Application
+
+
+方法执行时间:  对于性能的测试有几种常见的方式。其中最简单是直接通过输出log来监测某一段程序运行所消耗的时间。
+			在 Cocoa 中我们可以使用 CACurrentMediaTime 来获取精确的时间。
+			这个方法将会调用 mach 底层的 mach_absolute_time()，
+			它的返回是一个基于 Mach absolute time unit 的数字
+iOS 和 OS X 都有针对数学或者图形计算等数字信号处理方面进行了专门优化的框架：Accelerate.framework  
+库surge -> https://github.com/mattt/Surge
+
+
+
+ NSNull， Nil， nil， NULL 有啥区别?
+ nil: 指向一个对象的指针为空
+ 		let p = Person()
+ 		p = nil
+ Nil: 指向一个类的指针为空
+ 		Class c = Nil
+ Null: 非对象指针赋值为空值
+ 		int *p = Null
+ NSNull: 
+ 		一个类  [NSNull null], 用来表示集合对象的空值
+ 		[dic setObject: [NSNull null] forkey: @"key"]
+
+
+
+
+
+怎么实现高优先级来的任务后，低优先级的暂停让高的先执行？
+
+
+设计模式：
+	单例： 
+	UIApplication(应用程序实例类)
+	NSNotificationCenter(消息中心类)
+	NSFileManager(文件管理类)
+	NSUserDefaults(应用程序设置)
+	NSURLCache(请求缓存类)
+	NSHTTPCookieStorage(应用程序cookies池)	
+	代理模式：
+	delegate
+	观察者模式：
+	oberserver
+
+runloop响应事件：
+	1.Observer事件，runloop中状态变化时进行通知。（微信卡顿监控就是利用这个事件通知来记录下最近一次main runloop活动时间，在另一个check线程中用定时器检测当前时间距离最后一次活动时间过久来判断在主线程中的处理逻辑耗时和卡主线程）。这里还需要特别注意，CAAnimation是由RunloopObserver触发回调来重绘，接下来会讲到。
+
+	2.Block事件，非延迟的NSObject PerformSelector立即调用，dispatch_after立即调用，block回调。
+
+	3.Main_Dispatch_Queue事件：GCD中dispatch到main queue的block会被dispatch到main loop执行。
+
+	4.Timer事件：延迟的NSObject PerformSelector，延迟的dispatch_after，timer事件。
+
+	5.Source0事件：处理如UIEvent，CFSocket这类事件。需要手动触发。触摸事件其实是Source1接收系统事件后在回调 __IOHIDEventSystemClientQueueCallback() 内触发的 Source0，Source0 再触发的 _UIApplicationHandleEventQueue()。source0一定是要唤醒runloop及时响应并执行的，如果runloop此时在休眠等待系统的mach_msg事件，那么就会通过source1来唤醒runloop执行。
+
+	6.Source1事件：处理系统内核的mach_msg事件。（推测CADisplayLink也是这里触发）。
+
+
+数组： 环形缓冲区
+
+
+热信号 冷信号: 热信号走缓存 冷信号等
+
+
+const和define区别:
+	（1）就起作用的阶段而言： #define是在编译的预处理阶段起作用，
+						const是在 编译、运行的时候起作用。
+	（2）就起作用的方式而言： #define只是简单的字符串替换，没有类型检查。
+						而const有对应的数据类型，是要进行判断的，可以避免一些低级的错误。 
+	（3）就存储方式而言：#define只是进行展开，有多少地方使用，就替换多少次，它定义的宏常量在内存中有若干个备份；
+						const定义的只读变量在程序运行过程中只有一份备份。
+	（4）从代码调试的方便程度而言： const常量可以进行调试的，
+						define是不能进行调试的，因为在预编译阶段就已经替换掉了
+
+const的优点:
+	（1）const常量有数据类型，而宏常量没有数据类型。编译器可以对前者进行类型安全检查。而对后者只进行字符替换，没有类型安全检查，并且在字符替换可能会产生意料不到的错误。
+	（2）有些集成化的调试工具可以对const常量进行调试，但是不能对宏常量进行调试。
+	（3）const可节省空间，避免不必要的内存分配，提高效率
+
+
+oc数组:
+	array
+	mutableArray
+	hashTable
+	mapTable
+	pointerArray???
+
+	不管是NSArray,还是NSMutableArray ,alloc之后的得到都是__NSPlacrholderArray.
+	当我们nsarray一个空数组,得到的是__NSArray0
+	nsarray只有一个元素时,得到的是__NSSingleObjectArrayI
+	nsarray.count > 1 时, 得到 __NSArrayI
+	nsmutablearray 返回的都是__NSArrayM
+
+
+
+内存16k  ios10以上 32k
+
+查看是静态库还是动态库
+file xx
+静态库包含“current ar archive random library”字样。
+动态库包含“dynamically linked shared library”字样
+
+lipo 剥离 合并
+
+
+
+
+
+
+

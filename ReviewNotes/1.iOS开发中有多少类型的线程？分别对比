@@ -1,0 +1,257 @@
+1.iOS开发中有多少类型的线程？分别对比
+	NSThread
+	NSOperation/NSOperationQueue
+	GCD
+
+	NSThread: 
+	优点: 轻量级, 使用简单
+	缺点: 要自己管理线程的生命周期, 线程同步, 加锁,睡眠以及唤醒等(线程同步对数据的加锁会有一定的系统开销)
+	实现:  负责其他线程上的内存管理，在使用NSThread或者NSObject的线程方法时，一定要使用自动释放池
+	1.[NSThread detachNewThreadSelector:@selector(bigDemo) toTarget:self withObject:nil];
+	2.NSThread *thread = [[NSThread alloc] initWithTarget:self selector:@selector(bigDemo)
+	[thread start];
+
+	NSOperation:
+	优点: 不需要关心线程管理, 数据同的事情, 可以把精力放在自己需要执行的操作上
+	面向对象的
+	实现: 
+	1.NSInvocationOperation
+	2.NSBlockOperation
+	添加到Queue就会启动, queue可以设置最大并发的线程数量
+	 [op2 addDependency:op1];
+
+	GCD:
+	多核编程的解决方案
+	基于C语言
+
+
+	NSOperationQueue 可以取消准备执行的任务
+					 可以设置依赖关系 [A addDependency:B]  A 依赖于B完成
+					 KVO监听
+					 设置priority优先级
+
+
+2.GCD有哪些队列，默认提供哪些队列
+	1.dispatch_queue_t 队列
+	2.dispatch_queue_global_t 全局队列
+	3.dispatch_queue_concurrent_t 并行队列
+	4.dispatch_queue_serial_t 串行队列
+	5.dispatch_queue_main_t 主队列
+
+3.GCD有哪些方法api
+	1.dispatch_apply 效果类似for循环, 当apply里面不是异步操作的时候会阻塞线程, 如果是异步操作, 阻塞无效
+	2.dispatch_barrier_async: 等待前面代码完成后, 执行后面的代码
+	3.dispatch_semaphore_t: 线程锁
+	dispatch_semaphore_signal(semaphore);
+    dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER);
+    4.dispatch_group_t: 当group所有的事件完成后执行
+	第一种是dispatch_group_wait，会阻塞当前进程，等所有任务都完成或等待超时。第二种方法是使用dispatch_group_notify，异步执行闭包，不会阻塞
+4.GCD主线程 & 主队列的关系
+	主队列只会在主线程中执行
+5.如何实现同步，有多少方式就说多少
+	1.dispatch_group_t
+	2.dispatch_semaphore_t
+	3.dispatch_barrier_async
+6.dispatch_once实现原理
+	dispatch_once主要是根据onceToken的值来决定怎么去执行代码。
+	1.当onceToken= 0时，线程执行dispatch_once的block中代码
+	2.当onceToken= -1时，线程跳过dispatch_once的block中代码不执行
+	3.当onceToken为其他值时，线程被阻塞，等待onceToken值改变
+
+	当线程调用shareInstance,此时onceToken= 0，调用block中的代码，此时onceToken的值变为140734537148864。当其他线程再调用shareInstance方法时，onceToken的值已经是140734537148864了，线程阻塞。当block线程执行完block之后，onceToken变为-1.其他线程不再阻塞，跳过block。下次再调用shareInstance时，block已经为-1.直接跳过block。
+7.什么情况下会死锁
+	（1） 互斥条件：一个资源每次只能被一个进程使用。
+	（2） 请求与保持条件：一个进程因请求资源而阻塞时，对已获得的资源保持不放。
+	（3） 不剥夺条件:进程已获得的资源，在末使用完之前，不能强行剥夺。
+	（4） 循环等待条件:若干进程之间形成一种头尾相接的循环等待资源关系。
+8:有哪些类型的线程锁，分别介绍下作用和使用场景
+	多核处理器的情况下, 如果线程等待锁的时间比较短, 短到比线程两次切换上下文时间还要少. 自旋锁更好
+	如果时间比较长, 则互斥锁比较好, 单核处理不建议用自旋锁
+
+	自旋锁: 共享数据已经有其他线程加锁了, 线程会以死循环的方式等待锁, 一旦被访问的资源被解锁, 则等待资源的线程会立即执行
+	特点: 1.响应速度快 
+		  2.一直自旋等待获取锁, 但不会一直占用CPU, 超过系统分配的时间会被强制挂起 
+		  3. 如果不能保证所有线程都是统一优先级, 则会死锁
+	1.atomic
+	2.OSSpinLock: 存在优先级反转的问题,低优先级线程拿到锁, 高优先级线程进入忙等状态 消耗CPU 时间长了会被挂起
+	互斥锁: 如果共享数据已经有其他线程加锁了, 线程会进入休眠状态等待锁,一旦被放问的资源被解锁了, 则等待资源的线程会被唤醒
+	1.os_unfair_lock:ios10之后取代OSSpinLock的锁, 互斥锁
+	2.dispatch_semaphore信号量
+	3.pthread_mutex 跨平台的锁, c底层的线程锁
+	4.pthread_cond_t条件锁
+	5.pthread_rwlock_t读写锁: 分为读锁和写锁, 可以有多个线程共同持有读锁, 但写锁只能一个线程持有, 
+	6. NSLock普通对象锁: 底层对pthread_mutex_t的封装, 对应的参数时ptHRead_MUTEX_NORMAL.
+	7.NSCondition条件锁: 底层对pthread_cond_t的封装
+	8.NSConditionLock条件锁: 用NSCondition实现的
+	9.NSRecursiveLock递归锁: 是pthread_mutex_t的PTHREAD_MUTEX_RECUSIVE参数的封装
+9.NSOperationQueue中的maxConcurrentOperationCount默认值
+	static const NSInteger NSOperationQueueDefaultMaxConcurrentOperationCount = -1;
+10.NSTimer、CADisplayLink、dispatch_source_t 的优劣
+
+	NSTimer: 存在延迟, 不管是一次性还是周期性的timer的实际触发事件的时间, 都会与所加入的runloop和runloop Mode有关, 如果runloop正在执行一个连续性的计算, timer就会被延迟触发, 重复性的timer遇到这种情况, 如果延迟超过了一个周期, 则会再延时结束后立刻执行, 并按照之前指定的周期继续执行
+	- scheduledTimerWithTimeInterval(自动加入runloop)
+	- timerWithTimeInterval (不会加入runloop)
+	NSTimer属于 CFRunLoopTimerRef类型的事件, 当runloop在处理timer事件耗时严重, 在对应事件间隔内没有循环执行到下一个timer触发时间, 则会造成Timer的不准确
+
+	CADisplayLink: 默认同屏幕的刷新率, 一般屏幕的刷新次数为60次/s, 一帧月1/60秒, 默认不会添加当前的runloop, 需要手动添加
+	和屏幕和刷新率同步的定时器类, 以特定模式注册到runloop后, 每当屏幕内容刷新结束的时候, runloop就会向CADisplayLink指定的target发送一次指定的selector消息,  屏幕刷新频率固定, 正常情况下每次刷新结束都会被调用, 精确地相当高, 但如果调用的方法比较耗时, 超过了屏幕刷新周期, 会导致跳过若干次回调调用机会, 如果CPU过于繁忙, 无法保证屏幕60次刷新率, 就会导致跳过若干次调用回调方法的机会, 跳过次数取决CPU的忙碌程度
+
+	dispatch_source_t: 定义属性需要强引用
+	resume()//开启
+	suspend()//暂停
+	cancle()//关闭: 一定要在启动的时候关闭
+视图&图像相关
+1.AutoLayout的原理，性能如何
+	03 layout
+
+多个相同的图片，会重复加载吗
+
+如果GPU的刷新率超过了iOS屏幕60Hz刷新率是什么现象，怎么解决
+
+网络优化, 监控
+  监控指标:
+	TCP 建立连接时间
+	DNS 时间
+    SSL 时间
+    首包时间
+    响应时间
+    HTTP 错误率
+    网络错误率
+    流量
+  http Charles提供的监控指标
+  	Request Start Time
+	Request End Time
+	Response Start Time
+	Response End Time
+	Duration
+	DNS
+	Connect
+	SSL Handshake
+	Latency: 请求的延时是客户端到服务端以及服务端到客户端的传输时间
+
+6.如果保证项目的稳定性
+	良好的编程规范 + code review ＋版本管理＋测试
+
+8.如何设计一个git diff
+	寻找相同子串
+
+1.PerformSelector & NSInvocation优劣对比
+	performSelector:withObject:使用简单，但缺点是只能传一个参数
+
+	// 1. 根据方法创建签名对象sig
+    NSMethodSignature *sig = [[self class] instanceMethodSignatureForSelector:@selector(methodWithArg1:arg2:)];
+    // 2. 根据签名对象创建调用对象invocation
+    NSInvocation *invocation =[NSInvocation invocationWithMethodSignature:sig];
+    // 3. 设置调用对象的相关信息
+    invocation.target = self;
+    invocation.selector = @selector(methodWithArg1:arg2:);
+    NSString *name = @"SJM";
+    int age = 18;
+    // 参数必须从第2个索引开始，因为前两个已经被target和selector使用
+    [invocation setArgument:&name atIndex:2];
+    [invocation setArgument:&age atIndex:3];
+    // 4. 调用方法
+    [invocation invoke];
+    // 5. 获取方法返回值
+    NSNumber *num = nil;
+    [invocation getReturnValue:&num];
+
+6.沙盒目录的每个文件夹划分的作用
+	Documents：Documents里面的文件是需要同步到iTunes的。苹果建议将程序中建立的或在程序中浏览到的文件数据保存在该目录下，iTunes备份和恢复的时候会包括此目	录。所以，不要把用户下载的一些数据存放到此文件夹中。
+	Library/Caches：存放缓存文件，iTunes不会备份此目录，此目录下文件不会在应用退出的时候删除。与之对应的是tmp文件夹。
+	Library/Preferences：存放应用程序的一些配置信息，通常把用户对此应用程序的偏好设置存放在此文件夹下，iTunes会备份此目录。
+	Tmp：临时存放程序的一些文件，该文件夹下的文件会在程序退出时候删除。
+7.简述下match-o文件结构
+	文件头 mach64 Header
+	加载命令 Load Commands
+	文本段 __TEXT
+	数据段 __DATA
+	动态库加载信息 Dynamic Loader Info
+	入口函数 Function Starts
+	符号表 Symbol Table
+	动态库符号表 Dynamic Symbol Table
+	字符串表 String Table
+	补充：每个段可以拥有零个或多个区域（section）。每一个段（segment）都拥有一段虚拟地址映射到进程的地址空间
+
+
+
+
+objc_class:
+	Class superclass; //父类
+	cache_t cache; //缓存经常调用的方法
+	class_data_bits_t bits; //类对象的数据区域
+
+cache_t:
+    struct bucket_t *_buckets; //散列表 用来存储Method的链表
+    mask_t _mask;
+    mask_t _occupied;
+
+bucket_t: //函数指针 IMP, SEL
+
+class_data_bits_t: //数据区域
+
+class_rw_t: //
+    uint32_t flags;
+    uint32_t version;
+
+    const class_ro_t *ro;
+
+    method_array_t methods; //方法
+    property_array_t properties; //属性
+    protocol_array_t protocols; //协议
+
+    Class firstSubclass;
+    Class nextSiblingClass;
+
+    char *demangledName;
+
+class_ro_t://存储编译器决定的属性, 方法, 协议
+    uint32_t flags;
+    uint32_t instanceStart;
+    uint32_t instanceSize;
+#ifdef __LP64__
+    uint32_t reserved;
+#endif
+
+    const uint8_t * ivarLayout;
+    
+    const char * name;
+    method_list_t * baseMethodList;
+    protocol_list_t * baseProtocols;
+    const ivar_list_t * ivars;
+
+    const uint8_t * weakIvarLayout;
+    property_list_t *baseProperties;
+
+
+
+
+查找方法的时候优选cache 如果没有找到再去methodLists查找
+
+运行时调用relizeClass方法,
+1.从class_data_bits_t调用data方法, 讲结果从class_rw_t强制转换为class_ro_t指针
+2.初始化一个class_rw_t结构体
+3.设置结构体ro的值以及flag
+最后调用methodizeClass, 加载类里面的方法属性协议
+
+
+IMP、SEL、Method的区别和使用场景:
+	Imp: 方法的实现 一段c函数
+	SEL: 方法名
+	Method: 一个结构体
+		struct objc_method {
+		    SEL _Nonnull method_name                                 OBJC2_UNAVAILABLE;
+		    char * _Nullable method_types                            OBJC2_UNAVAILABLE;
+		    IMP _Nonnull method_imp                                  OBJC2_UNAVAILABLE;
+		} 	
+	class_getInstanceMethod(class, SEL)
+	class_addMethod(Class, SEL, IMP, types)
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,21 @@
+关联对象实现原理：
+
+public func objc_setAssociatedObject(
+_ object: Any, 
+_ key: UnsafeRawPointer, 
+_ value: Any?, 
+_ policy: objc_AssociationPolicy)
+
+
+关联对象的值实际上是通过AssociationsManager对象负责管理的，这个对象里有个AssociationsHashMap静态表，用来存储对象的关联值的，关于AssociationsHashMap存储的数据结构如下：
+
+AssociationsHashMap：
+
+------添加属性对象的指针地址[object的内存地址]（key）：ObjectAssociationMap（value：所有关联值对象）
+
+ObjectAssociationMap:
+
+------关联值的key[key]：objectAssociation[关联值的value]
+
+objectAssociation: policy 修饰符
+				   value  值

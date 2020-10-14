@@ -1,0 +1,115 @@
+设计思路:
+
+内存泄露:
+MLeaksFinder: 目前只检测 ViewController 跟 View 对象
+			[http://wereadteam.github.io/2016/02/22/MLeaksFinder/]
+	1.我们只需在一个 ViewController 被 pop 或 dismiss 一小段时间后，
+	看看该 UIViewController，它的 view，view 的 subviews 等等是否还存在
+	2.为基类 NSObject 添加一个方法 -willDealloc 方法
+	3.
+	- (BOOL)willDealloc {
+	    __weak id weakSelf = self;
+	    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3 * NSEC_PER_SEC)),dispatch_get_main_queue(), ^{
+	        [weakSelf assertNotDealloc];
+	    });
+	    return YES;
+	}
+	- (void)assertNotDealloc {
+	     NSAssert(NO, @“”);
+	}
+	4.
+	当我们认为某个对象应该要被释放了，在释放前调用这个方法，
+	如果3秒后它被释放成功，weakSelf 就指向 nil，不会调用到 -assertNotDealloc 方法，也就不会中断言，
+	如果它没被释放（泄露了），-assertNotDealloc 就会被调用中断言。
+	这样，当一个 UIViewController 被 pop 或 dismiss 时（我们认为它应该要被释放了），
+	我们遍历该 UIViewController 上的所有 view，依次调 -willDealloc，若3秒后没被释放，就会中断言
+
+Facebook 的 iOS 内存泄漏监测(oc)
+	循环引用:
+		Object对象: 获取ivar layout
+					const char *class_getIvarLayout(Class cls);
+					const char *class_getWeakIvarLayout(Class cls);
+		Object c++对象:
+				struct中的对象 用编码机制 (Type Encoding), 对于每一个实例变量 类型编码会告诉我们这个对象是什么样的数据类型
+		Struct: 类型编码 会指出有哪些字段和类型组成的, 通过转换类型编码 查出oc对象, 
+				并计算内存地址的偏移量来获取他们只想的对象地址
+		集合类型: 通过遍历集合来获取所有的变量所持有的对象, 有副作用
+		block: block可以转化成struct, 造了一个假的模拟block的struct对象, 将 释放
+
+
+有向无环图  DFS 和 拓扑排序
+
+
+监控卡顿:
+	注册Observer  监控runloop的状态
+	开个线程 检查主线程的状态
+			每隔1s监听一次, 如果主线程2s的 堆栈相同(堆栈的首个线程)
+	beforeSources(睡眠前)或者afterwaiting(唤醒后)在设置的时间阈值内一直没有变化
+
+
+列表刷新缓存:
+	推流: 有消息推送过来就缓存, 消息从数据库里拿.  耗费资源, 需要良好性能的服务器
+	拉流: 根据时间拉取数据
+	数据库+拉取数据: 底部刷新时 拉取服务器的数据, 直到拉取我们已经缓存的旧数据, 再次底部刷新时直接从我们本地数据库查找
+	推拉结合: 推小数据  拉大数据
+
+
+响应者链:
+	 override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if self.isUserInteractionEnabled == false || self.isHidden == true || self.alpha <= 0 {
+            //如果不响应, 或者隐藏, 或者alpha = 0
+            return nil
+        }
+
+        if self.point(inside: point, with: event) == false {
+            //如果触摸点不在自己身上
+            return nil
+        }
+        //从后遍历, 遍历最上层的view
+        for i in 0..<self.subviews.count {
+            let index = self.subviews.count-1-i
+            let childV = self.subviews[index]
+            let childP = self.convert(point, to: childV)
+            let fitView = childV.hitTest(childP, with: event)
+            if fitView {
+                return fitView
+            }
+        }
+        return self
+    }
+
+    事件传递：	
+    	从UIApplication开始， 到window 再往下层子视图找， 找到最深的子视图 为first response， 
+    	point(inside: point, with: event)和hitTest(_ point: CGPoint, with event: UIEvent?)
+    事件响应：
+    	从识别的视图开始 验证是否能响应事件，不能就交给父视图， 如果到application层仍没有响应就忽略，
+    	touchbegin:withEvent, touchesMoved:withEvent
+
+ 多读单写:
+ 	1.dispatch_group_t
+ 		dispatch_group_async{ 读 }
+ 		dispatch_group_async{ 读 }
+ 		dispatch_group_notify { 写 }
+ 	2.dispatch_barrier_async
+
+
+AFnetworking:
+	1. 生成一个request
+	2. 生成一个dataTask
+	3. 
+
+
+
+SDWebImage
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,39 @@
+app 启动流程
+	1.加载可执行文件
+		优化: 1.1尽量不使用内嵌的dylib(动态库在运行时链接，所以它们需要被打进bundle里面,理解为手动打进包的动态库), 加载内嵌dylib性能开销大
+			 1.2合并已有的dylib和使用静态库
+			 1.3懒加载dylib dlopen() 实际上懒加载做的工作会更多
+	2.加载动态链接库 release指针调整, bind符号绑定
+		1. Rebase在Image内部调整指针的指向。在过去，会把动态库加载到指定地址，所有指针和数据对于代码都是对的，而现在地址空间布局是随机化，所以需要在原来的地址根据随机的偏移量做一下修正。
+		2. Bind是把指针正确地指向Image外部的内容。这些指向外部的指针被符号(symbol)名称绑定，dyld需要去符号表里查找，找到symbol对应的实现
+		1.1减少objC类(class), 方法(selector), 分类(category)的数量
+		1.2减少c++虚函数的数量
+		1.3使用swift structs(内部做了优化, 符号数量更少)
+	3.runtime初始化, 注册objcC类 category注册, selector唯一性检查
+		1.1减少 objcC类 category, selector, 合并或删减一些
+	4.调用每个objc类与分类的+load方法, c++的构造属性函数, 非基本类型的c++静态全局变量的创建(类或者结构体)
+		1.1 少在类的load方法里做事情, 尽量推迟到initiailize
+		1.2减少构造器函数个数, 少做事情
+		1.3减少c++静态全局变量的个数
+
+	main执行后:
+		1.首屏初始化所需的配置文件的读写操作
+		2.首屏列表大数据的读取
+		3.首屏渲染的大量计算
+
+		1.main()
+		2.UIApplicationMain()
+		3.创建 application -> 
+		4.创建delegate 
+		5.创建和管理runloop
+		6.发送 didFinishLaunch
+		7.创建和展示 window
+		8.rootViewController
+
+
+xcode  Edit Scheme -> Environment Variables 可以设置环境变量 打印出个阶段时间
+
+load耗时监控:  
+	遍历动态链接器dyld内所有的image,取出header和slide
+	从image内找到segment_command_t, 遍历符号表找到所要替换的segname, 进行下一步方法替换
+	通过符号表以及我们所要替换的方法实现, 进行指针地址替换

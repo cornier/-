@@ -1,0 +1,122 @@
+锁：
+
+synchronized：
+
+	ori: //https://www.jianshu.com/p/d93c5d3f5e7d
+	ori: https://opensource.apple.com/source/objc4/objc4-646/runtime/objc-sync.mm
+	@synchronized(obj) {
+	    // do work
+	}
+	---》
+	@try {
+    objc_sync_enter(obj);
+    // do work
+	} @finally {
+	    objc_sync_exit(obj);    
+	}
+
+	@synchronized 结构在工作时为传入的对象分配了一个递归锁。
+	调用 objc_sync_enter(obj) 时，它用 obj 内容 内存地址的哈希值查找合适的 SyncData，然后将其上锁。
+	当你调用 objc_sync_exit(obj) 时，它查找合适的 SyncData 并将其解锁。
+	objc_sync_enter 不会retain release obj
+
+	typedef struct SyncData {
+	    struct SyncData* nextData;
+	    id               object;
+	    int              threadCount;  // number of THREADS using this block
+	    recursive_mutex_t        mutex;
+	} SyncData;
+
+	typedef struct {
+	    SyncData *data;
+	    spinlock_t lock;
+
+	    char align[64 - sizeof (spinlock_t) - sizeof (SyncData *)];
+	} SyncList __attribute__((aligned(64)));
+
+	#define COUNT 16
+	#define HASH(obj) ((((uintptr_t)(obj)) >> 5) & (COUNT - 1))
+	#define LOCK_FOR_OBJ(obj) sDataLists[HASH(obj)].lock
+	#define LIST_FOR_OBJ(obj) sDataLists[HASH(obj)].data
+	static SyncList sDataLists[COUNT];
+
+
+	int objc_sync_enter(id obj)
+	{
+	    int result = OBJC_SYNC_SUCCESS;
+
+	    if (obj) {
+	        SyncData* data = id2data(obj, ACQUIRE);
+	        require_action_string(data != NULL, done, result = OBJC_SYNC_NOT_INITIALIZED, "id2data failed");
+		
+	        result = recursive_mutex_lock(&data->mutex);
+	        require_noerr_string(result, done, "mutex_lock failed");
+	    } else {
+	        // @synchronized(nil) does nothing
+	        if (DebugNilSync) {
+	            _objc_inform("NIL SYNC DEBUG: @synchronized(nil); set a breakpoint on objc_sync_nil to debug");
+	        }
+	        objc_sync_nil();
+	    }
+
+	done: 
+	    return result;
+	}
+
+	int objc_sync_exit(id obj)
+	{
+	    int result = OBJC_SYNC_SUCCESS;
+	    
+	    if (obj) {
+	        SyncData* data = id2data(obj, RELEASE); 
+	        require_action_string(data != NULL, done, result = OBJC_SYNC_NOT_OWNING_THREAD_ERROR, "id2data failed");
+	        
+	        result = recursive_mutex_unlock(&data->mutex);
+	        require_noerr_string(result, done, "mutex_unlock failed");
+	    } else {
+	        // @synchronized(nil) does nothing
+	    }
+		
+	done:
+	    if ( result == RECURSIVE_MUTEX_NOT_LOCKED )
+	         result = OBJC_SYNC_NOT_OWNING_THREAD_ERROR;
+
+	    return result;
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	

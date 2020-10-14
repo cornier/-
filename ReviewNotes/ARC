@@ -1,0 +1,10 @@
+ARC
+
+6、ARC下哪些情况会造成内存泄漏？
+
+	block中的循环引用
+	NSTimer的循环引用
+	addObserver的循环引用
+	delegate的强引用
+	大次数循环内存爆涨
+	非OC对象的内存处理（需手动释放）

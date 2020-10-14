@@ -1,0 +1,86 @@
+iOS项目的编译过程:
+ 	1.写入辅助文件：将项目的文件结构对应表、将要执行的脚本、项目依赖库的文件结构对应表写成文件，方便后面使用；并且创建一个 .app 包，后面编译后的文件都会被放入包中；
+	2.运行预设脚本：Cocoapods 会预设一些脚本，当然你也可以自己预设一些脚本来运行。这些脚本都在 Build Phases 中可以看到；
+	3.编译文件：针对每一个文件进行编译，生成可执行文件 Mach-O，这过程 LLVM 的完整流程，前端、优化器、后端；
+	4.链接文件：将项目中的多个可执行文件合并成一个文件；
+	5.拷贝资源文件(例如图片和字体)：将项目中的资源文件拷贝到目标包；
+	6.编译 storyboard 文件：storyboard 文件也是会被编译的；
+	7.链接 storyboard 文件：将编译后的 storyboard 文件链接成一个文件；
+	8.编译 Asset 文件：我们的图片如果使用 Assets.xcassets 来管理图片，那么这些图片将会被编译成机器码，除了 icon 和 launchImage；
+	9.运行 Cocoapods 脚本：将在编译项目之前已经编译好的依赖库和相关资源拷贝到包中。
+	10.生成 .app 包
+	11.将 Swift 标准库拷贝到包中
+	12.对包进行签名
+	13.完成打包
+
+	//2-9顺序不固定 build rules 和 build Setting中设置
+
+3. 文件编译过程
+	3.1.预处理: (1)import 头文件替换
+			 (2)marco宏展开
+			 (3)处理其他的预编译指令
+
+			 条件编译语句也是再预处理阶段完成, 并且条件编译只允许编译源程序中满足条件的程序段, 使生成的目标程序较短, 从而减少了内存的开销并提高了程序的效率
+	3.2.lexical analysis-词法分析(输出token流)
+			词法分析: 将输入的代码转换为一系列符合特定语言的词法单元(包括关键字, 操作符, 变量等)
+	3.3.semantic analysis-语法分析(输出(AST)抽象语法树)
+			对代码进行标记并不是Clang最终的目的，而是一个Clang的一个过程，其实标记代码为了让代码更便于转化成机器语言，标记代码转化成抽象语法树（abstract syntax tree – AST）是一个必经之路
+			(1)AST:抽象语法树
+			(2)静态分析: 通过语法树进行代码静态分析, 找出非语法行错误
+					模拟代码执行路径, 分析出control-flow-graph,[MRC时可以分析出引用计数的错误]
+					预置了常用的checker(检查器)
+	3.4.codeGen-(intermediate representation, 简称IR), IR中间代码生成
+			当通过clang语法解析, 代码没有出现报错, clang前端就讲进入最后一步, 生成LLVM IR中间代码, 并将生成的LLVM IR代码递交给优化器
+			1.Class/Meta Class/Protocol/Category内存结构生成，并存放在指定section中（如Class：_DATA,_objc_classrefs）
+			2.Method/lvar/Property内存结构生成
+			3.组成method_list/ivar_list/property_list并填入Class
+			4.Non-Fragile ABI:为每个Ivar合成OBJC_IVAR_$_ 偏移值常量
+			5.存取Ivar的语句（ivar = 123; int a = ivar;）转写成base + OBJC_IVAR$_的形式
+			6.将语法树中的ObjcMessageExpr翻译成相应版本的objc_msgSend，
+			7.对super关键字的调用翻译成objc_msgSendSuper
+			8.根据修饰符strong/weak/copy/atomic合成@property 自动实现的 setter/getter
+			9.处理@synthesize
+			10.生成block_layout的数据结构
+			11.变量的capture(__block/__weak)
+			12.生成_block_invoke函数
+			13.ARC：分析对象引用关系，将objc_storeStrong/objc_storeWeak等ARC代码插入
+			14.将ObjCAutoreleasePoolStmt转译成objc_autoreleasePoolPush/Pop
+			15.实现自动调用[super dealloc]
+			16为每个拥有ivar的Class合成.cxx_destructor方法来自动释放类的成员变量，代替MRC时代的“self.xxx = nil”
+	3.5.optimize-优化IR
+			直接转换来的代码不合适且消耗内存, 优化放在这, 好处在于前端不需要考虑优化, 减少工作量
+	3.6.生成Target相关汇编
+			其中.section指令, 指定了接下来会执行的代码段
+	3.7.link生成Executable
+			LLVM将会把这些汇编代码输出成二进制的可执行文件
+
+segment:
+	__PAGEZERO:大小4G,并不是文件的真实大小, 但是规定了进程地址空间的前4GB被映射为不可执行 不可读 不可写
+	__TEXT:被执行的代码, 进程允许执行这些代码 但是不能修改
+	__DATA: 可读写 不可执行 它包含了将会被更改的数据
+	__LINKDIT: link edit表(包含符号和字符串的动态链接器表)的地址, 里面包含了加载程序的元数据, 例如函数的名称和地址
+
+
+
+
+4.Swift编译过程:
+	4.1 解析：解析器是一个简单的递归下降解析器（在 lib / Parse 中实现），带有集成的手动编码词法分析器。解析器负责生成没有任何语义或类型信息的抽象语法树（AST），并针对输入源的语法问题发出警告或错误。
+	4.2 语意分析：语义分析（在 lib / Sema 中实现）负责解析 AST 并将其转换为格式良好的完全检查形式的 AST，并在源代码中发出语义问题的警告或错误。语义分析包括类型推断，如果成功，则所得到的代码是类型检查安全的 AST 。
+	4.3 Clang导入器：Clang导入器（在 lib / ClangImporter 中实现）导入Clang模块，并将它们导出的 C 或 Objective-C API 映射到相应的 Swift API中。结果导入的 AST 可以通过语义分析来引用。
+	4.4 SIL生成：Swift中间语言（Swift Intermediate Language，简称SIL）是一种高级的，Swift特有的中间语言，适用于 Swift 代码的进一步分析和优化。SIL 生成阶段（在 lib / SILGen 中实现）将类型检查的 AST 降低到所谓的 “原始” SIL。SIL的设计描述在 docs/ SIL.rst 中可以看到。
+	4.5 SIL优化：在SIL优化（在 lib/Analysis，lib/ ARC，lib/LoopTransforms，和 lib/Transforms 中实现）执行额外的高级别，Swift 特有的优化的程序，包括（例如）自动引用计数优化，虚拟化和通用专业化。
+	4.6 LLVM IR生成：IR生成（在 lib/IRGen 中实现）将 SIL 降到 LLVM IR，此时LLVM可以继续对其进行优化并生成机器码。
+
+ref: https://www.jianshu.com/p/5b2cce762106
+
+
+
+
+
+
+
+
+
+
+
+

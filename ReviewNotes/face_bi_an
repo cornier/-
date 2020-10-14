@@ -1,0 +1,146 @@
+1. 类和结构体。  系统对结构体做了什么优化??   
+	写时拷贝
+//2. 哪些是用结构体做的。
+	struct，enum，以及 tuple 都是值类型。而平时使用的 Int， Double，Float，String，Array，Dictionary，Set 
+3. 协议。相关的。（使用的关键字）
+4. 类型擦除
+	1.类型擦除
+    protocol A {
+        associatedtype Item
+        var list: [Item] { get set }
+    }
+    
+    class Model2: A {
+    //    typealias Item = Int
+        var list: [Int] = []
+    }
+  
+    2.类型擦除
+    class Model<Element> {
+        func add(A: Element) {
+    
+        }
+    }
+    let tmp = Model<Int>()
+    tmp.add(A: 6)
+    
+    struct Model3<Element> {
+        func add(A: Element) {
+    
+        }
+    }
+    let a = Model3<Int>()
+    a.add(A: 7)
+5. @propertyWrapper  
+	属性包装器
+	为属性添加同一个操作
+6. 值类型和引用类型
+	值类型的赋值是深拷贝 值语义
+	引用类型, 即所有实例共享一份数据拷贝
+7. 函数调用方式
+		内联是指在编译期把每一处方法调用替换为直接执行方法内部的代码
+		ps: https://blog.csdn.net/qq_36487644/article/details/87967969
+	直接派发[静态调用]: 最快, 需要指令集少, 编译器有优化[函数的内联]
+	函数表派发: 函数表使用了一个数组来存储类声明的每一个函数的指针,
+				里面记录着类的所有函数.如果父类函数被override 表只会保存被override的函数.一个新加的函数会被插入到这个数组的最后
+				1.读取0xB00的函数表
+				2.读取函数指针的索引+偏移量
+				3.跳到函数对应的地址
+	消息机制派发:同OC
+
+	swift的派发机制: 	
+		使用dynamic修饰的时候会通过Objective_C的运行时进行消息机制派发
+
+//8. 响应者链
+
+9. UIAppliction 作用
+		管理app生命周期
+		openurl
+		通知的token注册
+		处理用户事件
+
+10. appdelegate 理解
+		管理生命周期
+			1.app的启动代码
+			2.响应app的状态, 比如app切到后天和前台等
+			3.响应外部传递给app的通知, push, memory warning
+			4.app的状态是否保存或者回复
+			5.响应不是发送给特定的view或者vc, 而是发送给app本身的事件
+			6.用来保存一些不属于特定vc的数据
+11. swift和oc的比较
+12. 高阶函数 map flat 这些通用的特征 ??
+	入参或者返回值是函数
+13. AnyObjcet 和 AnyClass
+	AnyClass = AnyObject.type
+14. Self
+	UIView.self 返回类的类型
+	Self 在定义协议中使用 不仅指代的是 实现该协议的类型本身，也包括了这个类型的子类
+
+//OC
+1.runtime
+2.runloop
+3.多线程
+4.weak实现。
+5.isa指针
+6.autoreleasepool的实现
+7.block的类型和捕获。
+8.多线程和锁。自旋锁和互斥锁比较。
+9.KVO原理。
+10.分类和扩展的区别
+13.
+
+//通用型问题。
+1.http和https。
+2.tcp三次握手和四次挥手。
+3.框架和模块设计。
+4.面向对象和面向协议
+
+
+@autoclosure
+Dictionary线程安全 怎么设计
+dealloc具体做了什么
+线程重用
+并发和并行
+结构体写时复制具体什么时候复制
+？？怎么实现的
+大图加载怎么做 CATiledLayer
+NSOpreation哪些gcd做不到的
+app加载顺序
+编译静态关联
+runloop source0和source1区别
+runloop卡顿判断
+set和array区别
+下标运算 [0]
+swift深拷贝
+WKWebView存在的问题 请求拦截
+响应链
+手势冲突怎么解决
+对象 类 原类 关联
+
+
+
+
+
+//米哈游面试题
+图片是什么时候解压的
+访问控制  private
+设计一个查找内存泄漏
+怎么用runloop
+数据存储
+优化app包大小
+泛型怎么实现的
+string和nsstring区别
+struct和class区别
+keychain
+图片大小计算
+uuid  udid
+如果有两个URLProtocol怎么执行
+数据存储
+	userdefault 存储为plist文件
+
+
+
+
+
+
+

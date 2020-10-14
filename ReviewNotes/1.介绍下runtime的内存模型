@@ -1,0 +1,94 @@
+1.介绍下runtime的内存模型
+2.为什么要设计metaclass
+3.class_copyIvarList & class_copyPropertyList区别
+	class_copyIvarList 可以获取实例变量和属性
+	class_copyPropertyList  只能获取属性
+4.class_rw_t 和 class_ro_t 的区别
+	//https://www.jianshu.com/p/823eaedb3697
+5.category如何被加载的,两个category的load方法的加载顺序，两个category的同名方法的加载顺序 
+	//https://www.jianshu.com/p/40e28c9f9da5
+	//https://tech.meituan.com/2015/03/03/diveintocategory.html
+	在运行时加载, 
+	1.把category的实例方法, 协议以及属性添加到类上
+	2.类方法和协议添加到类的 metaclaa上
+	加载顺序 取决于compileSource顺序
+6.category & extension区别，能给NSObject添加Extension吗，结果如何
+	extension在编译期决定, 是类的一部分同声明和实现文件行程完整的类, 生命周期同类, 必须有源码才能为类添加, 可以添加实例变量
+	categroy在运行期决定, 无法添加实例变量,(运行时, 内存布局已经确定,如果添加会破坏类的内存布局)
+7.消息转发机制和其他语言的消息机制优劣对比
+
+
+
+category:
+	分类在编译的时候合并到类中
+	编译的时候放在category_t中  运行时合并
+	struct category_t {
+		    const char *name; 那个类的
+		    classref_t cls;
+		    struct method_list_t *instanceMethods;  对象方法
+		    struct method_list_t *classMethods;  类方法
+		    struct protocol_list_t *protocols;  协议方法
+		    struct property_list_t *instanceProperties; 属性
+		    struct property_list_t *_classProperties;
+
+		    method_list_t *methodsForMeta(bool isMeta) {
+		        if (isMeta) return classMethods;
+		        else return instanceMethods;
+		    }
+
+		    property_list_t *propertiesForMeta(bool isMeta, struct header_info *hi);
+		};
+
+
+		objc-os.mm
+		_objc_init
+		map_images
+		map_image_nolock
+
+		objc-runtime-new.mm
+		_read_images
+		remethodizeClass
+		attachCategories
+		attachList
+		relloc memmove memcpy
+
+
+
+图片压缩算法: CGDataProviderCreateDirect
+			jpeg压缩: 离散余弦变换、Huffman编码、顺序编码模式
+
+block:  全局block 未使用外部变量  存放再数据段
+		栈block  使用外部变量但未copy
+		堆block  对栈进行copy操作
+
+block怎么引用外面的值: 基本数据类型 复制
+					外部对象 复制对象地址 强引用, 写操作不生效, __block修饰 可以生效
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

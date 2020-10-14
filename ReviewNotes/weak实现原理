@@ -1,0 +1,19 @@
+weak实现原理
+
+
+	sideTables: 管理所有对象的引用计数和weak指针, 苹果创建了一个全局的sidetables
+				(全局的hash表, 里面内容是sideTable结构体, 使用对象的内存地址当他的key)
+
+		struct SideTable {
+		    spinlock_t slock;
+		    RefcountMap refcnts;
+		    weak_table_t weak_table;
+		 }
+				1.1 spinlock_t: 以前是自旋锁, 之后改成了互斥锁
+				1.2 引用计数器RefcountMap: 存放真正的引用计数个数
+				1.3 weak_table_t: weak_entry_t: [数组]
+									num_entries: 保证数组有个合适的size
+
+		weak_entry_t: referent: 被指对象的地址
+						referrers: 所有指向这个对象的弱引用的地址
+						inline_referrers: [4个元素], 少于等于4个用这个 多了 用referrers

@@ -1,0 +1,182 @@
+UI
+
+	1.约束[layout engine 视图 约束 优先级 固定大小 -> 最终计算转换成最终的大小和位置]
+		1.1 约束发生变化或者设置约束的constant priority时也会触发约束变化
+		1.2 Layout Engine检测约束发生变化重新计算
+		1.3 superview setneedlayout
+		1.4 容错处理
+		1.5 layout Engine layoutsubviews
+		1.6 通过cassway算法计算 各个视图的位置, 算出来子视图的frame 从Engine中copy出来
+	2.drawRect & layoutsubviews调用时机
+		drawRect: 1. loadview->viewdidLoad -> drawrect
+				  2. 如果view初始化没有设置rect大小,则不会调用drawrect
+				  3. contentMode = UIViewContentModeRedraw, 每次设置或更改frame时调用drawRect
+				  4. setNeedDisplay/setNeedDisplayInRect 触发drawRect(rect 不为空)
+				  5. 调用sizeThatFits后被调用,所以可以先调用sizeToFit计算出size, 系统自动调用drawRect
+				  [sizeToFit:会计算出最优的 size 而且会改变自己的size]
+				  [sizeThatFits:会计算出最优的 size 但是不会改变 自己的 size]
+				  注意事项: 
+				  	1、若使用UIView绘图，只能在drawRect：方法中获取相应的contextRef并绘图。如果在其他方法中获取到一个invalidate的ref保存下来，在drawRect中并不能用于画图。等到在这里调用时，可能当前上下文环境已经变化。
+					2、若使用CALayer绘图，只能在drawInContext: 中（类似于drawRect）绘制，或者在delegate中的相应方法绘制。同样也是调用setNeedDisplay等间接调用以上方法。
+					3、若要实时画图，不能使用gestureRecognizer，只能使用touchbegan等方法来掉用setNeedsDisplay实时刷新屏幕。
+					4、UIImageView继承自UIView,但是UIImageView能不重写drawRect方法用于实现自定义绘图。具体原因如下：
+					Apple在文档中指出：UIImageView是专门为显示图片做的控件，用了最优显示技术，是不让调用darwrect方法， 要调用这个方法，只能从uiview里重写。
+
+		layoutsubviews:
+			1.init初始化不会触发layoutSubviews
+			2.addSubview(frame != 0)会触发layoutSubviews
+			3.设置view的frame会触发layoutSubview
+			4. 滚动UIScrollView会触发layoutSubviews
+			5.旋转屏幕会触发父UIview上的layoutSubviews
+			6.改变一个view的大小的时候会触发父UIView上的layoutSubviews事件
+			7.直接调用setLayoutSubviews
+
+	补: 在没有外界干预的情况下 一个view的frame或者bounds发生变化时, 系统会先去标记flag这个view 等下一次渲染时机到来  也就是runloop的下一次循环, 会去按照最新的布局会重新布局视图
+	setNeedLayout就是给这个view添加一个标记, 告诉系统下一次渲染实际需要重新布局这个视图
+	layoutIfNeed就是告诉系统, 如果已经设置了flag , 就不用等下一个次渲染时机到来 立即重新渲染,
+	而layoutSubviews则是由系统去调用，不需要我们主动调用，我们只需要调用layoutIfNeed，告诉系统是否立即执行重新布局的操作
+
+	iOS显示系统:
+		1. iOS 的显示系统是由 VSync(垂直同步) 信号驱动的，VSync 信号由硬件时钟生成，每秒钟发出 60 次（这个值取决设备硬件，比如 iPhone 真机上通常是 59.97）。iOS 图形服务接收到 VSync 信号后，会通过 IPC[进程通信] 通知到 App 内。App 的 Runloop 在启动后会注册基于端口的源也就是source1，Vsync信号则通过 mach_port 端口传递过来，同时唤醒runloop，随后 Source1 的回调会驱动整个 App 的动画与显示
+		ips:图形服务同APP Process是两个进程，他们之间通信的方式是IPC,了解WKWebview实现机制的同学会发现，WebContent process 同App process进行通信的方式也是通过IPC来实现的。有兴趣的同学可以参考我的另一篇博客：关于wkwebview讲解。
+		2. 通过mach_port端口发送消息，唤醒Runloop后，做了一些修改view和layer的工作，并提交到全局容器，等待渲染时机到来。
+		Core Animation 在 RunLoop 中注册了一个 Observer，监听了 BeforeWaiting 和 Exit 事件。当一个触摸事件到来时（也可以理解成Vsync信号唤起），RunLoop 被唤醒，App 中的代码会执行一些操作，比如创建和调整视图层级、设置 UIView 的 frame、修改 CALayer 的透明度、为视图添加一个动画；这些操作最终都会被 CALayer 标记，并通过 CATransaction 提交到一个中间状态去。当上面所有操作结束后，RunLoop 即将进入休眠（或者退出）时，关注该事件的 Observer 都会得到通知。这时 Core Animation 注册的那个 Observer 就会在回调中，把所有的中间状态合并提交到 GPU 去显示；
+		如果此处有动画，通过 DisplayLink 稳定的刷新机制会不断的唤醒runloop，使得不断的有机会触发observer回调，从而根据时间来不断更新这个动画的属性值并 绘制出来。
+
+	渲染时机:
+		1、Core Animation 在 RunLoop 中注册了一个 Observer 监听 BeforeWaiting(即将进入休眠) 和 Exit (即将退出Loop) 事件 。
+		2、当在操作 UI 时，比如改变了 Frame、更新了 UIView/CALayer 的层次时，或者手动调用了 UIView/CALayer 的 setNeedsLayout/setNeedsDisplay方法后，这个 UIView/CALayer 就被标记为待处理，并被提交到一个全局的容器去。当Oberver监听的事件到来时，回调执行函数中会遍历所有待处理的UIView/CAlayer 以执行实际的绘制和调整，并更新 UI 界面
+
+		1、首先是通过CATransaction提交到全局的容器中
+		2、检查是否有标记为需要重新绘制和布局的Layer
+		3、如果有则执行layout和redraw操作。
+		另外从这上面我们也可以看到：一定是先有布局，再去绘制图形。即：layout调用一定是在drawRect:之前。
+
+
+	3.UI的刷新原理
+
+	4.什么是离屏渲染
+		Layer中触发离屏渲染的属性
+			1.mask
+				1.1 cornerRadius: 对内容是image无效,
+				1.2 maskToBounds: 如果设置了yes 那么Core Animation 就会隐式的创建一个与layer的bounds相匹配的并且裁剪过的mask, 这个mask可以实现圆角的效果
+			2.shadow
+				2.1 shadowOpacity: 设置layer的不透明度
+				2.2 shadowRadius: 用来进行阴影半径渲染的模糊半径
+				2.3 shadowOffset: 设置layer的阴影偏移量
+			3.edgeAntialiasing
+				3.1 edgeAntialiasingMask: 通过这个属性可以怼某一个或者某几个边启动或者不启用抗锯齿, 默认对所有边生效
+				3.2 allowsEdgeAntialiasing: 是否开启抗锯齿
+			4.group opacity
+				4.1 allowsGroupOpacity: 设置为 YES 并且 layer 的opacity小于1，那么该layer将 被允许将其自身合并为一个组，并且是与他的parent分开的。而且需要注意的是，如果这个 layer 还包含很多的不透明的子 layer 的话，那么就会牺牲一些性能。而在 iOS 7＋ ,这个属性默认为 YE
+			5. bitmap
+				5.1 layer内有个id contents: 如果展示图片,  contents = CGImageRef [结构体 CGImage  ->  一个 bitmap image 就是一个矩形像素阵列，每个像素表示源图像中的单个样本或数据点] 
+
+
+	5.图片是什么时候解码的，如何优化
+		1.imageWithContentsOfFile 从磁盘中加载一张图片
+		2.然后将生成的UIImage 赋值给 UIImageView
+		3.一个隐式的CATransaction捕捉到UIImageView图层树的变化
+		4.在主线程中下一个runloop到来时, CoreAnimation 提交了这个隐式的Transaction, 这个过程可以对图片进行copy, 而受 图片是否字节对齐等因素 这个copy操作可能会涉及一下部分或者全部步骤:
+			(1)分配内存磁盘缓冲区, 用于管理文件IO和解压缩操作
+			(2)将文件数据读取到磁盘中
+			(3)将压缩的图片数据解码成未压缩的位图形式[非常好使的CPU操作]
+			(4)最后Core Animation中的CALayer使用未压缩的位图数据渲染UIIamgeView的图层
+			(5)CPU计算好图片的Frame, 对图片解压之后, 交给GPU来做图片渲染
+		5.渲染流程
+			(1)GPU获取图片的坐标
+			(2)将坐标交给顶点着色器(顶点计算)
+			(3)将图片光栅化(获取图片对应屏幕上的像素点)
+			(4)片元着色器计算(计算每个像素点的最终显示的颜色值)
+			(5)从帧缓存区渲染到屏幕上
+		
+	当未解压缩的图片将要渲染到屏幕时, 系统会在主线程中对图片进行解压缩, 
+	可以提前在子线程中对图片进行强制解压缩,
+	强制解压缩的原理就是对图片进行重新绘制, 得到一个新的解压缩后的位图, 核心函数 CGBitmapContextCreate
+	(1)使用CGBitmapContextCreate 函数创建一个位图上下文
+	(2)使用CGContextDrawImage 函数将原始位图绘制到上下文中
+	(3)使用CGBitmapContextCreateImage函数创建一张新的解压缩后的位图
+
+	6.图片渲染怎么优化
+		图片渲染到屏幕的流程
+			(1)读取文件
+			(2)计算Frame
+			(3)图片解码
+			(4)解码后 纹理图片位图数据 通过 数据总线交给GPU
+			(5)GPU获取图片Frame
+			(6)顶点变换计算
+			(7)光栅化
+			(8)根据纹理坐标获取每个像素点的颜色值[如果出现透明值, 需要将每个像素的颜色*透明度值]
+			(9)渲染到帧缓冲区
+			(10)渲染到屏幕上
+
+
+	7. 隐式动画和显示动画的区别:
+		1、隐式动画一直存在 如需关闭需设置；显式动画是不存在，如需显式 要开启(创建)。
+
+		2、显式动画是指用户自己通过beginAnimations:context:和commitAnimations创建的动画。
+		隐式动画是指通过UIView的animateWithDuration:animations:方法创建的动画。
+
+		3、隐式动画是系统框架自动完成的。Core Animation在每个runloop周期中自动开始一次新的事务，即使你不显式的用[CATransaction begin]开始一次事务，任何在一次runloop循环中属性的改变都会被集中起来，然后做一次0.25秒的动画。在iOS4中，苹果对UIView添加了一种基于block的动画方法：+animateWithDuration:animations:。这样写对做一堆的属性动画在语法上会更加简单，但实质上它们都是在做同样的事情。CATransaction的+begin和+commit方法在+animateWithDuration:animations:内部自动调用，这样block中所有属性的改变都会被事务所包含。
+
+		4、显式动画，Core Animation提供的显式动画类型，既可以直接对退曾属性做动画，也可以覆盖默认的图层行为。我们经常使用的CABasicAnimation，CAKeyframeAnimation，CATransitionAnimation，CAAnimationGroup等都是显式动画类型，这些CAAnimation类型可以直接提交到CALayer上。
+		无论是隐式动画还是显式动画，提交到layer后，经过一系列处理，最后都经过上文描述的绘制过程最终被渲染出来。
+
+		默认layer支持隐式动画   actionForLayer:forKey: view作为CALayerDelegate, 默认返回NSNull 不需要执行停止搜索[返回nil, layer 去其他地方寻找, 返回一个动作对象layer将使用]
+	8.UIView & CALayer的区别
+		 UIView是视图部分, 但在核心动画里面图层是模型部分, 图层封装了几何, 时间, 可视化属性, 同时提供了图层显示的内容,
+		 1.首先UIView可以响应事件，Layer不可以.
+		 2.View中frame getter方法，bounds和center，UIView并没有做什么工作；它只是简单的各自调用它底层的CALayer的frame，bounds和position方法。
+		 3.UIView主要是对显示内容的管理而 CALayer 主要侧重显示内容的绘制
+
+	9.图片加载流程:
+		1.imageWithContentofFile 加载一个图片
+		2.将生成的UIImage给ImageView
+		3.隐式的CATransation捕捉到UIImageView图层树变化
+		4.等待主线程下一个runloop的到来时, CoreAnimation提交了隐式的Transaction
+		这个过程可能copy图片, 受字节对齐等因素影响[分配内存缓冲应用于管理文件io和解压缩操作, 将文件数据从磁盘读到内存, 将压缩的图片数据解压成未压缩的位图(耗时cpu), CALayer使用未压缩的位图数据渲染UIImageView图层, CPU计算frame解压图片后交给GPU]
+		5.解压后纹理图片位图通过数据总线交给GPU
+渲染流程:6.GPU获取图片坐标
+		7.将坐标交给顶点着色器
+		8.将图片光栅化[获取图片对应屏幕上的像素点]
+		9.片元着色器计算(每个像素点最终显示的颜色值)
+		10.从帧缓冲区渲染到屏幕上
+	10.解压缩原理:
+		对图片进行重新绘制, 得到一张新的解压缩的位图
+		CGBitmapContextCreate 创建上下文
+		CCGContextDrawImage   将原始位图绘制到上下文中
+		CGBitmaoContextCreateImage
+
+		优化
+		1.ios10之后 用UIGraphicImageRender替换UIGraohicBeginImageContentWithOptions
+		2.绘制到CoreGraphic的content中
+		CGBitmapContextCreate(void * __nullable data,
+		size_t width, 
+		size_t height, 
+		size_t bitsPerComponent, 
+		size_t bytesPerRow,
+		CGColorSpaceRef cg_nullable space,
+		uint32_t bitmapInfo)
+		3.使用image i/o创建缩略图像
+		4.CoreImage进行重采样
+		5.使用UIImage优化图片渲染
+
+
+
+	ref: https://www.jianshu.com/p/079e5cf0f014
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

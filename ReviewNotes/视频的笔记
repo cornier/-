@@ -1,0 +1,27 @@
+视频的笔记
+
+
+读内存
+memory read 0x00000000
+x/格式字节数 0x0000000  格式: x是16进制, f是浮点, d是10进制
+x/3xw 0x0000000  字节数: b byte1字节,  h  half word 2字节  w  word 4字节  g gaint word 8字节
+3 代表几个
+
+写内存
+memory write 0x000000 改写数据 其实 加偏移
+
+
+内存对齐: 结构体的大小必须是最大成员大小的倍数
+
+操作系统 内存对齐: 堆空间 16的倍数
+
+gnu not unix
+
+class_getInstanceSize 结构体占用内存大小
+malloc_size  实际分配了多少内存
+
+sizeof  [运算符] 在编译时候确定的
+
+实例对象 isa + 成员变量
+
+isa的真实地址 需要 & isa_mask

@@ -1,0 +1,66 @@
+西瓜面试题:
+
+let var
+var thing = "cars" // thing是什么类型
+let closure = {    
+  print("I love \(thing)")
+}
+thing = "airplanes"
+closure()  // print出来是什么？ I love airplanes
+=======
+@interface A 
+int a;
+bool b;
+-(void)foo;
+@end
+
+A *a = [A new];
+a多少字节   //isa 8字节  int  4字节 bool 1字节  最低单位16字节
+========
+Swift static let和let区别 ????
+
+static let 类调用  初始化一次必须赋值
+let 实例调用       可以在init中赋值
+
+
+class A {
+let b = "aString"
+}
+
+let a = A()
+let b = A()
+let c = A()
+//static 防止子类重写
+
+========
+Swift中static,class 方法区别 ?????
+class A {
+static func foo1() {
+}
+class func foo2() {
+}
+}
+
+A.foo1()
+A.foo2()
+class: 允许子类重写
+static: 不允许子类重写
+???
+======
+__block int ac = 0;
+ NSLog(@"%p", &ac);  // 1
+ dispatch_async(dispatch_get_main_queue(), ^{
+        ac++;
+        NSLog(@"%p", &ac); // 2 
+  });
+  NSLog(@"%p", &ac);  //3
+
+override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView?  {
+}
+//https://www.cnblogs.com/cqb-learner/p/5811462.html
+------------- 
+8427 //8742
+交换任意的两个位， 千位跟个位
+7428
+百位和十位 8247
+允许最多交换一次， 能得到的最大数是多少？

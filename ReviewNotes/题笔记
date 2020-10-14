@@ -1,0 +1,85 @@
+题笔记
+
+	调用dispose时: 
+		为c++的实例变量们调动destructors
+		为ARC状态下的实例变量们调用-release
+		解除所有使用runtime Associate方法关联的对象
+		解除所有__weak引用
+		调用free
+
+	不能向编译后得到的类中增加实例变量
+	能向运行时创建的类中添加实例变量
+		1.因为编译后的类已经注册在 runtime 中,类结构体中的objc_ivar_list实例变量的链表和instance_size实
+		  例变量的内存大小已经确定，同时 runtime 会调用 class_setivalayout或者class_setWeakLvarLayout来处理strong weak 引用.所以不能向存在的类中添加实例变量。
+		2.运行时创建的类是可以添加实例变量，调用 class_addIvar 函数. 但是的在调用 objc_allocateClassPair 之 后，objc_registerClassPair 之前,原因同上.
+
+十九、Category 在编译过后，是在什么时机与原有的类合并到一起的
+	1. 程序启动后，通过编译之后，Runtime 会进行初始化，调用 _objc_init。
+	2. 然后会 map_images
+	3. 接下来调用map_images_unlock
+	4. 然后调用read_images, 这个方法会读取所有的类的相关信息
+	5. 最后是调用reMethodizeClass 重新方法化
+	6. 在reMethodizeClass 方法内部会调用attachCategories: 这个方法会传入Class	和category, 会将方法列表, 协议列表等与原有的类合并, 最后加入class_rw_t结构体中
+
+29.block和函数指针的区别:
+	1.函数指针是对一个函数地址的引用, 这个函数在编译的时候就已经确定了
+	block是一个函数对象, 是在程序运行过程中产生的
+	2.􏰡在ios开发中 block是对象, 他封装了一层代码, 这段代码可以在任何时候执行, blocks可以作为函数参数或者函数的返回值, 而其本身又可以带输入参数或者返回值, 他和传统的函数指针很相似,  但有区别 blocks是inline的 并且对局部变量只是只读
+
+	globalblock: 没有引用外部变量, 全局变量或静态变量
+	mallocblock: 局部变量or oc属性, 并且强引用 or copy
+	stackblock: 局部变量 没有强引用orcopy
+
+
+TableView 优化
+	1. cell复用
+	2. 定义高度
+	3. cell 高度的计算 estimatedRowHeight
+	6. 预渲染
+		不要使用透明背景 opaque设置yes 尽量不要 clearColor 阴影渐变
+	7, 减少视图数目, 尽量不要动态添加
+	8. 减少cell的绘制
+
+
+耗电优化
+ 降低CPU GPU功耗
+ 少用定时器
+ 优化I/O操作  1.尽量不要频繁写入小数据, 最好批量写入
+ 			2.大量数据 考虑dispatch_io
+ 			3.数据量大 建议数据库
+网络优化
+ 减少压缩网络数据
+ 数据相同缓存数据  NSCache 
+ 断点续传
+ 网络不可用时 提示 不尝试网络请求
+ 设置超时操作
+ 批量传输
+定位优化
+ CoreLocation requestLocation 定位完成后会自动关闭定位
+ 如果不是导航  用完定位就关闭
+ 精度尽量不要很高
+ 后台定位 pausesLocationUpdatesAutomatically
+硬件检测优化
+ 使用后及时关闭
+
+
+ 面向对象和面向过程区别
+
+ 	面向过程: 看名字它是注重过程的。当解决一个问题的时候，面向过程会把事情拆分成： 一个个函数和数据（用于方法的参数） 。然后按照一定的顺序，执行完这些方法（每个方法看作一个个过程），等方法执行完了，事情就搞定了。
+ 	
+ 	面向对象: 看名字它是注重对象的。当解决一个问题的时候，面向对象会把事物抽象成对象的概念，就是说这个问题里面有哪些对象，然后给对象赋一些属性和方法，然后让每个对象去执行自己的方法，问题得到解决
+
+ oc 和 swift 区别
+ 	swift 有optional  元祖 
+ 	swift 必须确定类型  oc 可以弱化确定类型的时机, 动态绑定等
+	Swift 取消了 Objective-C 的指针/地址等不安全访问的使用
+ 	swift 用一下可选值? ! let var 之类的 使更安全
+
+
+混编
+包名-Bridging-Header.h 文件, swift使用oc的文件
+oc文件添加@objcMembers  swift 访问oc文件
+
+fps = 大于1s内刷新的次数 /  时间
+
+NS_REQUIRES_SUPER  继承父类 override xxx方法时 必须调用super.xxx
